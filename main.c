@@ -169,13 +169,21 @@ int main(int argc, char **argv) {
 
     int len;
     char *line = NULL;
+    char *prefix = NULL;
     Tree tree = {0};
     tree.key = "\0";
     for (size_t n = 0; (len = getline(&line, &n, config)) != -1;) {
-        trim(&line);
+        if (line[len - 1] == '\n') line[len - 1] = '\0';
+        if (strip_prefix(&line, "prefix=")) {
+            prefix = strdup(line);
+            continue;
+        }
+        trim_start(&line);
         if (*line == ';') { // vim(ish)-style comments, because why not
             continue;
         }
+        trim_end(line);
+        printf("line = %s\n", line);
         if (strip_prefix(&line, "exit ")) { // prefix=$mod+v
             trim_start(&line);
             exits[exits_len++] = strdup(line);
@@ -195,8 +203,11 @@ int main(int argc, char **argv) {
         steps_len = 0;
     }
 
+    if (prefix == NULL) prefix = "Vim: ";
+    printf("prefix = %s\n", prefix);
+
     print_tree(tree, 0);
-    write_tree(out, tree, "Vim: ", (const char **) exits, exits_len);
+    write_tree(out, tree, prefix, (const char **) exits, exits_len);
 
 done:
     if (config) fclose(config);
